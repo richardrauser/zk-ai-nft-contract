@@ -18,7 +18,8 @@ describe("NFTAIGenerator", function () {
     // Contracts are deployed using the first signer/account by default
     const [owner, otherAccount] = await ethers.getSigners();
 
-    console.log("Account deploying: " + owner);
+    console.log("Account deploying: " + owner.address);
+    console.log("Other account: " + otherAccount.address);
 
     const AINFTGenerator = await ethers.getContractFactory("AINFTGenerator");
     const generator = await AINFTGenerator.deploy();
@@ -36,6 +37,14 @@ describe("NFTAIGenerator", function () {
       const { generator, owner } = await deploy();
       const ownerAddress = await generator.owner();
       expect(ownerAddress).to.equal(owner.address);
+    });
+
+    it("Should transfer ownership", async function () {
+      const { generator, owner, otherAccount } = await deploy();
+      generator.transferOwnership(otherAccount.address);
+
+      const ownerAddress = await generator.owner();
+      expect(ownerAddress).to.equal(otherAccount.address);
     });
 
     it("Should mint successfully and totalSupply increments", async function () {
