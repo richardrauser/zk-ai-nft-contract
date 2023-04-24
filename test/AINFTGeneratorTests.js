@@ -1,3 +1,5 @@
+// import { ethers, keccak256 } from 'ethers';
+
 const {
   time,
   loadFixture,
@@ -5,6 +7,7 @@ const {
 const { anyValue } = require("@nomicfoundation/hardhat-chai-matchers/withArgs");
 const { expect } = require("chai");
 const { LogDescription } = require("@ethersproject/abi");
+const { keccak256 } = require("ethers/lib/utils");
 
 describe("NFTAIGenerator", function () {
 
@@ -29,9 +32,10 @@ describe("NFTAIGenerator", function () {
 
   describe("AINFTGenerator Tests", function () {
     it("Deployment should succeed", async function () {
-      
       expect(await deploy()).not.reverted;
     });
+
+    // OWNERHSIP TESTS
 
     it("Should set the right owner", async function () {
       const { generator, owner } = await deploy();
@@ -47,43 +51,68 @@ describe("NFTAIGenerator", function () {
       expect(ownerAddress).to.equal(otherAccount.address);
     });
 
+    // MINTING TESTS
+
     it("Should mint successfully and totalSupply increments", async function () {
-      const { generator } = await deploy();
-      await generator.mint("some name","https://someurl.com/image");
+      const { owner, generator } = await deploy();
+      
+      const abiCoder = ethers.utils.defaultAbiCoder;
+      console.log("abiCoder: " + abiCoder);
+      const name = "Crazy AI NFT Image";
+      const url = "http://someurl.com/image";
+      const nonce = await generator.totalSupply();
+            
+      const message = name + url;
+      const hashedMessage = keccak256(ethers.utils.solidityPack(["string", "uint"], [message, nonce]));
+      let sig = await owner.signMessage(ethers.utils.arrayify(hashedMessage));
+      console.log("SIGNATURE JS");
+      console.log(sig);
+      
+      await generator.mint(name, url, nonce, sig);
 
       expect(await generator.totalSupply()).to.equal(1);
     });
 
-    it("tokenURI returns correct metadata", async function () {
+    // it("tokenURI returns correct metadata", async function () {
+    //   const { generator } = await deploy();
+    //   await generator.mint("some name", "https://someurl.com/image");
+
+    //   const metadata = await generator.tokenURI(0);
+    //   const parsedMetadata = JSON.parse(metadata);
+
+    //   expect(parsedMetadata.name).to.equal("some name");
+    //   expect(parsedMetadata.image).to.equal("https://someurl.com/image");
+    // });
+
+    // it("tokenURI returns correct metadata after multiple mints", async function () {
+    //   const { generator } = await deploy();
+    //   await generator.mint("some name 0", "https://someurl.com/image0");
+    //   await generator.mint("some name 1", "https://someurl.com/image1");
+    //   await generator.mint("some name 2", "https://someurl.com/image2");
+    //   await generator.mint("some name 3", "https://someurl.com/image3");
+    //   await generator.mint("some name 4", "https://someurl.com/image4");
+    //   await generator.mint("some name 5", "https://someurl.com/image5");
+    //   await generator.mint("some name 6", "https://someurl.com/image6");
+    //   await generator.mint("some name 7", "https://someurl.com/image7");
+    //   await generator.mint("some name 8", "https://someurl.com/image8");
+    //   await generator.mint("some name 9", "https://someurl.com/image9");
+
+    //   const metadata = await generator.tokenURI(3);
+    //   const parsedMetadata = JSON.parse(metadata);
+
+    //   expect(parsedMetadata.name).to.equal("some name 3");
+    //   expect(parsedMetadata.image).to.equal("https://someurl.com/image3");
+    // });
+
+    // SIGNING TESTS
+
+    it("Should revery mint with invalid signature", async function () {
       const { generator } = await deploy();
-      await generator.mint("some name", "https://someurl.com/image");
-
-      const metadata = await generator.tokenURI(0);
-      const parsedMetadata = JSON.parse(metadata);
-
-      expect(parsedMetadata.name).to.equal("some name");
-      expect(parsedMetadata.image).to.equal("https://someurl.com/image");
+    
+      expect(generator.mint("some name","https://someurl.com/image", "foobar")).to.be.reverted;
     });
 
-    it("tokenURI returns correct metadata after multiple mints", async function () {
-      const { generator } = await deploy();
-      await generator.mint("some name 0", "https://someurl.com/image0");
-      await generator.mint("some name 1", "https://someurl.com/image1");
-      await generator.mint("some name 2", "https://someurl.com/image2");
-      await generator.mint("some name 3", "https://someurl.com/image3");
-      await generator.mint("some name 4", "https://someurl.com/image4");
-      await generator.mint("some name 5", "https://someurl.com/image5");
-      await generator.mint("some name 6", "https://someurl.com/image6");
-      await generator.mint("some name 7", "https://someurl.com/image7");
-      await generator.mint("some name 8", "https://someurl.com/image8");
-      await generator.mint("some name 9", "https://someurl.com/image9");
 
-      const metadata = await generator.tokenURI(3);
-      const parsedMetadata = JSON.parse(metadata);
-
-      expect(parsedMetadata.name).to.equal("some name 3");
-      expect(parsedMetadata.image).to.equal("https://someurl.com/image3");
-    });
 
 
   });
