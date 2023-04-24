@@ -14,4 +14,6 @@ interface IERC2981Royalties {
         external
         view
         returns (address _receiver, uint256 _royaltyAmount);
+
+    function supportsInterface(bytes4 interfaceId) external view returns (bool);
 }

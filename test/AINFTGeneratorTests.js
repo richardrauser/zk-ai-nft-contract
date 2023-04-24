@@ -51,23 +51,58 @@ describe("NFTAIGenerator", function () {
       expect(ownerAddress).to.equal(otherAccount.address);
     });
 
+    // PAYMENT TESTS
+
+    it('test payOwner pays out', async function () {
+        const provider = ethers.provider;
+      const { owner, generator, otherAccount } = await deploy();
+
+        await generator.setMintPrice(ethers.utils.parseEther("1"));
+
+        const originalBalance = await provider.getBalance(otherAccount.address);
+        expect(originalBalance).to.be.equal(ethers.utils.parseEther("10000"));
+
+        const overrides = { value: ethers.utils.parseEther("1") };
+        const name = "Crazy AI NFT Image";
+        const url = "http://someurl.com/image";
+        const nonce = await generator.totalSupply();            
+        const sig = await generateSig(owner, name, url, nonce);
+        await generator.mint(name, url, nonce, sig, overrides);
+
+        const afterMintContractBalance = await provider.getBalance(generator.address);
+        expect(afterMintContractBalance).to.be.equal(ethers.utils.parseEther("1"));
+
+
+
+        await generator.transferOwnership(otherAccount.address);
+
+        generator.connect(otherAccount);
+        console.log("new owner: " + await generator.owner());
+
+        await generator.connect(otherAccount).payOwner(ethers.utils.parseEther("0.5"));
+
+        const afterPaymentOwnerBalance = await provider.getBalance(otherAccount.address);
+        const afterPaymentContractBalance = await provider.getBalance(generator.address);
+        
+        // expect(afterPaymentOwnerBalance).to.be.equal(ethers.utils.parseEther("10000.5"));
+        expect(afterPaymentContractBalance).to.be.equal(ethers.utils.parseEther("0.5"));
+    });
+
     // MINTING TESTS
+
+    async function generateSig(owner, name, url, nonce) {
+      const message = name + url;
+      const hashedMessage = keccak256(ethers.utils.solidityPack(["string", "uint"], [message, nonce]));
+      return await owner.signMessage(ethers.utils.arrayify(hashedMessage));
+    }
 
     it("Should mint successfully and totalSupply increments", async function () {
       const { owner, generator } = await deploy();
       
-      const abiCoder = ethers.utils.defaultAbiCoder;
-      console.log("abiCoder: " + abiCoder);
       const name = "Crazy AI NFT Image";
       const url = "http://someurl.com/image";
-      const nonce = await generator.totalSupply();
-            
-      const message = name + url;
-      const hashedMessage = keccak256(ethers.utils.solidityPack(["string", "uint"], [message, nonce]));
-      let sig = await owner.signMessage(ethers.utils.arrayify(hashedMessage));
-      console.log("SIGNATURE JS");
-      console.log(sig);
-      
+      const nonce = await generator.totalSupply();            
+      const sig = await generateSig(owner, name, url, nonce);
       await generator.mint(name, url, nonce, sig);
 
       expect(await generator.totalSupply()).to.equal(1);
@@ -112,7 +147,22 @@ describe("NFTAIGenerator", function () {
       expect(generator.mint("some name","https://someurl.com/image", "foobar")).to.be.reverted;
     });
 
+        // ERC-2981 Royalties
 
+    it('ERC2981: deployer mints and is recipient and 10% royalties', async function () {
+        const overrides = { value: ethers.utils.parseEther("0.01") };
+        const { generator, owner } = await deploy();
+
+        const name = "Crazy AI NFT Image";
+        const url = "http://someurl.com/image";
+        const nonce = await generator.totalSupply();            
+        const sig = await generateSig(owner, name, url, nonce);
+        await generator.mint(name, url, nonce, sig);
+
+        const info = await generator.royaltyInfo(0, 100);
+        expect(info[0]).to.be.equal(owner.address);
+        expect(info[1].toNumber()).to.be.equal(5);
+    });
 
 
   });

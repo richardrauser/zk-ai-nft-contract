@@ -5,18 +5,29 @@ import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "erc721a/contracts/extensions/ERC721AQueryable.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "erc721a/contracts/ERC721A.sol";
-import "./ERC2981/ERC2981Royalties.sol";
+import "./ERC2981/IERC2981Royalties.sol";
 import "hardhat/console.sol";
 
-contract AINFTGenerator is ERC721AQueryable, ERC2981Royalties, Ownable {
+contract AINFTGenerator is ERC721AQueryable, IERC2981Royalties, Ownable {
     mapping(uint => string) private _names;
     mapping(uint => string) private _urls;
+    uint256 private mintPrice = 0.00 ether;
 
     constructor() ERC721A("ZKAINFTGenerator", "AINFT") {}
 
+    // Minting
+
+    function getMintPrice() public view returns (uint256) {
+        return mintPrice;
+    }
+
+    function setMintPrice(uint256 _mintPrice) public onlyOwner {
+        mintPrice = _mintPrice;
+    }
+
     function mint(string calldata name, string calldata url, uint nonce, bytes memory sig) public payable {        
-        bytes32 hashedMessage = keccak256(abi.encodePacked(name, url, nonce));
-        require(isValidData(hashedMessage, sig), "Invalid signature");
+        require(msg.value >= mintPrice, "Not enough ETH");
+        require(isValidSig(keccak256(abi.encodePacked(name, url, nonce)), sig), "Invalid signature");
 
         uint256 tokenId = _nextTokenId();
         _mint(msg.sender, 1);
@@ -32,7 +43,17 @@ contract AINFTGenerator is ERC721AQueryable, ERC2981Royalties, Ownable {
         ));
     }
 
+    // Payment
+
+    function payOwner(uint256 amount) public onlyOwner {
+        require(amount <= address(this).balance, "Amount too high");
+        address payable owner = payable(owner());
+        owner.transfer(amount);
+    }
+
+
     // for OpenSea
+
     function contractURI() public pure returns (string memory) {
         return "https://zknft.ai/storefront-metadata.json";
     }
@@ -42,14 +63,23 @@ contract AINFTGenerator is ERC721AQueryable, ERC2981Royalties, Ownable {
     function supportsInterface(bytes4 interfaceId)
         public
         view
-        override(ERC721A, IERC721A, ERC2981Royalties)
+        override(ERC721A, IERC721A, IERC2981Royalties)
         returns (bool) {
         return super.supportsInterface(interfaceId);
     }
 
+    // function supportsInterface(bytes4 interfaceId)
+    //     public
+    //     view
+    //     virtual
+    //     override
+    //     returns (bool) {
+    //     return interfaceId == type(IERC2981Royalties).interfaceId || super.supportsInterface(interfaceId);
+    // }
+
     // Sig verification
 
-    function isValidData(bytes32 hashedMessage, bytes memory sig) public view returns(bool) {
+    function isValidSig(bytes32 hashedMessage, bytes memory sig) public view returns(bool) {
         bytes memory prefix = "\x19Ethereum Signed Message:\n32";
         bytes32 prefixedHashedMessage = keccak256(abi.encodePacked(prefix, hashedMessage));
         console.log("PREFIXED HASHED MESSAGE SOLIDITY");
@@ -114,5 +144,15 @@ contract AINFTGenerator is ERC721AQueryable, ERC2981Royalties, Ownable {
         // implicitly return (r, s, v)
     }
 
+    // Royalties
+
+    function royaltyInfo(uint256, uint256 value)
+        public
+        view
+        override
+        returns (address receiver, uint256 royaltyAmount) {
+        // 5% royalty
+        return (owner(), (value * 500) / 10000);
+    }
 
 }
