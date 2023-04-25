@@ -8,6 +8,15 @@ const { anyValue } = require("@nomicfoundation/hardhat-chai-matchers/withArgs");
 const { expect } = require("chai");
 const { LogDescription } = require("@ethersproject/abi");
 const { keccak256 } = require("ethers/lib/utils");
+const { Wallet } = require("ethers");
+
+async function generateSig(account, name, url, nonce) {
+  const message = name + url;
+  console.log("message: " + message + " nonce: " + nonce);
+  const hashedMessage = keccak256(ethers.utils.solidityPack(["string", "uint"], [message, nonce]));
+  console.log("hashedMessage: " + hashedMessage);
+  return await account.signMessage(ethers.utils.arrayify(hashedMessage));
+}
 
 describe("NFTAIGenerator", function () {
 
@@ -31,11 +40,11 @@ describe("NFTAIGenerator", function () {
   }
 
   describe("AINFTGenerator Tests", function () {
-    it("Deployment should succeed", async function () {
-      expect(await deploy()).not.reverted;
-    });
+    // it("Deployment should succeed", async function () {
+    //   expect(await deploy()).not.reverted;
+    // });
 
-    // OWNERHSIP TESTS
+    // // OWNERHSIP TESTS
 
     it("Should set the right owner", async function () {
       const { generator, owner } = await deploy();
@@ -72,8 +81,6 @@ describe("NFTAIGenerator", function () {
         const afterMintContractBalance = await provider.getBalance(generator.address);
         expect(afterMintContractBalance).to.be.equal(ethers.utils.parseEther("1"));
 
-
-
         await generator.transferOwnership(otherAccount.address);
 
         generator.connect(otherAccount);
@@ -90,12 +97,6 @@ describe("NFTAIGenerator", function () {
 
     // MINTING TESTS
 
-    async function generateSig(owner, name, url, nonce) {
-      const message = name + url;
-      const hashedMessage = keccak256(ethers.utils.solidityPack(["string", "uint"], [message, nonce]));
-      return await owner.signMessage(ethers.utils.arrayify(hashedMessage));
-    }
-
     it("Should mint successfully and totalSupply increments", async function () {
       const { owner, generator } = await deploy();
       
@@ -108,43 +109,65 @@ describe("NFTAIGenerator", function () {
       expect(await generator.totalSupply()).to.equal(1);
     });
 
-    // it("tokenURI returns correct metadata", async function () {
-    //   const { generator } = await deploy();
-    //   await generator.mint("some name", "https://someurl.com/image");
+    it("tokenURI returns correct metadata", async function () {
+      const { generator, owner } = await deploy();
 
-    //   const metadata = await generator.tokenURI(0);
-    //   const parsedMetadata = JSON.parse(metadata);
+      const name = "some name";
+      const url = "https://someurl.com/image";
+      const nonce = await generator.totalSupply();            
+      const sig = await generateSig(owner, name, url, nonce);
+      await generator.mint(name, url, nonce, sig);
 
-    //   expect(parsedMetadata.name).to.equal("some name");
-    //   expect(parsedMetadata.image).to.equal("https://someurl.com/image");
-    // });
+      const metadata = await generator.tokenURI(0);
+      const parsedMetadata = JSON.parse(metadata);
 
-    // it("tokenURI returns correct metadata after multiple mints", async function () {
-    //   const { generator } = await deploy();
-    //   await generator.mint("some name 0", "https://someurl.com/image0");
-    //   await generator.mint("some name 1", "https://someurl.com/image1");
-    //   await generator.mint("some name 2", "https://someurl.com/image2");
-    //   await generator.mint("some name 3", "https://someurl.com/image3");
-    //   await generator.mint("some name 4", "https://someurl.com/image4");
-    //   await generator.mint("some name 5", "https://someurl.com/image5");
-    //   await generator.mint("some name 6", "https://someurl.com/image6");
-    //   await generator.mint("some name 7", "https://someurl.com/image7");
-    //   await generator.mint("some name 8", "https://someurl.com/image8");
-    //   await generator.mint("some name 9", "https://someurl.com/image9");
+      expect(parsedMetadata.name).to.equal("some name");
+      expect(parsedMetadata.image).to.equal("https://someurl.com/image");
+    });
 
-    //   const metadata = await generator.tokenURI(3);
-    //   const parsedMetadata = JSON.parse(metadata);
+    it("tokenURI returns correct metadata after multiple mints", async function () {
+      const { generator, owner } = await deploy();
 
-    //   expect(parsedMetadata.name).to.equal("some name 3");
-    //   expect(parsedMetadata.image).to.equal("https://someurl.com/image3");
-    // });
+      for (var i = 0; i < 10; i++) {
+
+        const name = "some name " + i;
+        const url = "https://someurl.com/image" + i;
+        const nonce = await generator.totalSupply();            
+        const sig = await generateSig(owner, name, url, nonce);
+        await generator.mint(name, url, nonce, sig);
+      }
+
+      const metadata = await generator.tokenURI(3);
+      const parsedMetadata = JSON.parse(metadata);
+
+      expect(parsedMetadata.name).to.equal("some name 3");
+      expect(parsedMetadata.image).to.equal("https://someurl.com/image3");
+    });
 
     // SIGNING TESTS
 
-    it("Should revery mint with invalid signature", async function () {
+    it("Should reverse mint with invalid signature", async function () {
+      const { generator, otherAccount } = await deploy();
+      
+      const sig = generateSig(otherAccount, "some name", "https://someurl.com/image", 0);
+
+      await expect(generator.mint("some name", "https://someurl.com/image", 0, sig)).to.be.reverted;
+    });
+
+    it("Test sig generated with backend", async function () {
       const { generator } = await deploy();
-    
-      expect(generator.mint("some name","https://someurl.com/image", "foobar")).to.be.reverted;
+
+      const signer = new Wallet("0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80");
+      console.log("signer: " + signer.address);
+
+      const expectedSig = await generateSig(signer, "test", "test", 1);
+
+      await generator.transferOwnership(signer.address);
+      console.log("new owner: " + await generator.owner());
+
+      await expect(generator.mint("test", "test", 1, expectedSig)).to.not.be.reverted;
+
+      expect("0x5c19b3f1450895c0d519dba30391f9a2235d3fe91cd06831d6670dc5128fe6187acd1c8ae75e7f4ed2b9e6fcc60a2b459300a36e0c0c04b33294c163bedb0c381c").to.equal(expectedSig);
     });
 
         // ERC-2981 Royalties
@@ -163,7 +186,6 @@ describe("NFTAIGenerator", function () {
         expect(info[0]).to.be.equal(owner.address);
         expect(info[1].toNumber()).to.be.equal(5);
     });
-
 
   });
 });
