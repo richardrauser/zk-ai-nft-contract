@@ -72,19 +72,13 @@ contract AINFTGenerator is ERC721AQueryable, IERC2981Royalties, Ownable {
     function isValidSig(bytes32 hashedMessage, bytes memory sig) public view returns(bool) {
         bytes memory prefix = "\x19Ethereum Signed Message:\n32";
         bytes32 prefixedHashedMessage = keccak256(abi.encodePacked(prefix, hashedMessage));
-        console.log("PREFIXED HASHED MESSAGE SOLIDITY");
         console.logBytes(abi.encodePacked(prefixedHashedMessage));
 
         address signer = recoverSigner(prefixedHashedMessage, sig);
 
-        console.log("RECOVERED SIGNER:");
-        console.log(signer);
-        console.log("OWNER");
-        console.log(owner());
-
         return (signer == owner());
-
     }
+    
     function recoverSigner(bytes32 message, bytes memory sig) public pure returns (address) {
         uint8 v;
         bytes32 r;
