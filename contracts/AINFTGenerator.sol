@@ -147,3 +147,4 @@ contract AINFTGenerator is ERC721AQueryable, IERC2981Royalties, Ownable {
             str = string(bstr);
         }
     }
+}
