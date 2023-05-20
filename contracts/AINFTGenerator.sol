@@ -69,7 +69,7 @@ contract AINFTGenerator is ERC721AQueryable, IERC2981Royalties, Ownable {
 
     // Sig verification
 
-    function isValidSig(bytes32 hashedMessage, bytes memory sig) public view returns(bool) {
+    function isValidSig(bytes32 hashedMessage, bytes memory sig) internal view returns(bool) {
         bytes memory prefix = "\x19Ethereum Signed Message:\n32";
         bytes32 prefixedHashedMessage = keccak256(abi.encodePacked(prefix, hashedMessage));
         console.logBytes(abi.encodePacked(prefixedHashedMessage));
@@ -79,7 +79,7 @@ contract AINFTGenerator is ERC721AQueryable, IERC2981Royalties, Ownable {
         return (signer == owner());
     }
     
-    function recoverSigner(bytes32 message, bytes memory sig) public pure returns (address) {
+    function recoverSigner(bytes32 message, bytes memory sig) internal pure returns (address) {
         uint8 v;
         bytes32 r;
         bytes32 s;
@@ -87,7 +87,7 @@ contract AINFTGenerator is ERC721AQueryable, IERC2981Royalties, Ownable {
         return ecrecover(message, v, r, s);
     }
 
-    function splitSignature(bytes memory sig) public pure returns (bytes32 r, bytes32 s, uint8 v) {
+    function splitSignature(bytes memory sig) internal pure returns (bytes32 r, bytes32 s, uint8 v) {
         require(sig.length == 65, "signature length must be 65");
 
         assembly {
