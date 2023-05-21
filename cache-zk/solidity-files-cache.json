@@ -2,8 +2,8 @@
   "_format": "hh-sol-cache-2",
   "files": {
     "/Users/richard/development/blockchain/zknft-ai-contract/contracts/AINFTGenerator.sol": {
-      "lastModificationDate": 1684143202532,
-      "contentHash": "702437526f5029d93db748883f8fcdca",
+      "lastModificationDate": 1684685402626,
+      "contentHash": "4277e75187bfe328aa4d51f5c5382577",
       "sourceName": "contracts/AINFTGenerator.sol",
       "solcConfig": {
         "version": "0.8.13",
@@ -61,7 +61,7 @@
       ]
     },
     "/Users/richard/development/blockchain/zknft-ai-contract/contracts/ERC2981/IERC2981Royalties.sol": {
-      "lastModificationDate": 1682349069792,
+      "lastModificationDate": 1684685421400,
       "contentHash": "664c1c6a223921b9165268295196a875",
       "sourceName": "contracts/ERC2981/IERC2981Royalties.sol",
       "solcConfig": {
@@ -275,7 +275,7 @@
       ]
     },
     "/Users/richard/development/blockchain/zknft-ai-contract/node_modules/@openzeppelin/contracts/access/Ownable.sol": {
-      "lastModificationDate": 1682259189726,
+      "lastModificationDate": 1684685241924,
       "contentHash": "e436cea06129be2c73cda4b1acc848b5",
       "sourceName": "@openzeppelin/contracts/access/Ownable.sol",
       "solcConfig": {
