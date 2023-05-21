@@ -48,7 +48,7 @@ contract AINFTGenerator is ERC721AQueryable, IERC2981Royalties, Ownable {
     function payOwner(uint256 amount) public onlyOwner {
         require(amount <= address(this).balance, "Amount too high");
         address payable owner = payable(owner());
-        owner.transfer(amount);
+        owner.call{value: amount}("");
     }
 
     // for OpenSea
