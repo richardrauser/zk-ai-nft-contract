@@ -2,7 +2,7 @@
   "_format": "hh-sol-cache-2",
   "files": {
     "/Users/richard/development/blockchain/zknft-ai-contract/contracts/AINFTGenerator.sol": {
-      "lastModificationDate": 1684694838877,
+      "lastModificationDate": 1684694909693,
       "contentHash": "8af68fa0e717cd33892ef2fb94ea3f62",
       "sourceName": "contracts/AINFTGenerator.sol",
       "solcConfig": {
